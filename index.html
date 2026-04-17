@@ -22,20 +22,21 @@ h1{font-size:24px;font-weight:700;margin-bottom:6px}
 .btn-shopify{background:#95BF47;color:#fff;margin-top:12px}
 .btn-shopify:hover{background:#7ea83d}
 .btn-shopify:disabled{background:#c5d9a0;cursor:not-allowed}
-.sb{padding:16px;border-radius:12px;margin-bottom:16px;font-size:14px;line-height:1.5}
-.sc{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
-.sw{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
-.se{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
-.sf{margin-top:16px}
-.sf input{width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;outline:none}
-.sf input:focus{border-color:#95BF47}
-.hint{font-size:12px;color:#888;margin-top:6px;text-align:left}
-.ui{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f3f4f6;border-radius:10px;margin-bottom:20px;font-size:13px}
-.ui .em{font-weight:600;color:#333}
-.ui .lo{color:#4F46E5;cursor:pointer;font-weight:600;border:none;background:none;font-size:13px}
+.status-box{padding:16px;border-radius:12px;margin-bottom:16px;font-size:14px;line-height:1.5}
+.status-connected{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+.status-disconnected{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.status-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+.shop-field{margin-top:16px}
+.shop-field input{width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;outline:none}
+.shop-field input:focus{border-color:#95BF47}
+.shop-hint{font-size:12px;color:#888;margin-top:6px;text-align:left}
+.user-info{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f3f4f6;border-radius:10px;margin-bottom:20px;font-size:13px}
+.user-info .email{font-weight:600;color:#333}
+.user-info .logout{color:#4F46E5;cursor:pointer;font-weight:600;border:none;background:none;font-size:13px}
 .hidden{display:none}
-.spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:8px}
-@keyframes sp{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.last-sync{font-size:12px;color:#888;margin-top:8px}
 </style>
 </head>
 <body>
@@ -43,35 +44,43 @@ h1{font-size:24px;font-weight:700;margin-bottom:6px}
 <div class="logo">&#x1F4E6;</div>
 <h1>Restockt</h1>
 <p class="subtitle">Connect your Shopify store to sync products and orders with Restockt.</p>
-<div id="L">
+<div id="login-section">
 <div style="margin-bottom:24px">
-<div class="field"><label for="email">Email</label><input type="email" id="email" placeholder="you@example.com"></div>
-<div class="field"><label for="password">Password</label><input type="password" id="password" placeholder="Your Restockt password"></div>
+<div class="field"><label for="email">Email</label><input type="email" id="email" placeholder="you@example.com" autocomplete="email"></div>
+<div class="field"><label for="password">Password</label><input type="password" id="password" placeholder="Your Restockt password" autocomplete="current-password"></div>
 </div>
-<button class="btn btn-primary" id="lb" onclick="doLogin()">Sign In</button>
-<div id="le" class="sb se hidden" style="margin-top:16px"></div>
+<button class="btn btn-primary" id="login-btn" onclick="handleLogin()">Sign In</button>
+<div id="login-error" class="status-box status-error hidden" style="margin-top:16px"></div>
 </div>
-<div id="C" class="hidden">
-<div class="ui"><span class="em" id="ue"></span><button class="lo" onclick="doLogout()">Sign Out</button></div>
-<div id="sa"></div>
-<div id="cf">
-<div class="sf"><input type="text" id="sn" placeholder="your-store-name" value="r06fs1-wy"><p class="hint">Your Shopify store name (before .myshopify.com)</p></div>
-<button class="btn btn-shopify" id="cb" onclick="doConnect()">&#x1F6CD;&#xFE0F; Connect Shopify</button>
+<div id="connect-section" class="hidden">
+<div class="user-info">
+<span class="email" id="user-email"></span>
+<button class="logout" onclick="handleLogout()">Sign Out</button>
+</div>
+<div id="status-area"></div>
+<div id="connect-form">
+<div class="shop-field">
+<input type="text" id="shop-name" placeholder="your-store-name" autocomplete="off">
+<p class="shop-hint">Enter your Shopify store name (the part before .myshopify.com)</p>
+</div>
+<button class="btn btn-shopify" id="connect-btn" onclick="handleConnect()">&#x1F6CD;&#xFE0F; Connect Shopify</button>
 </div>
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-var U="https://tjihedvhcsayulfwfpov.supabase.co",K="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqaWhlZHZoY3NheXVsZndmcG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDI4NDYsImV4cCI6MjA5MDAxODg0Nn0.9L4baXAf7rWjKqJFq8q18iyVNd16TXgNRsqrGIhFAUE";
-var sb=supabase.createClient(U,K),me=null,tok=null;
-async function init(){var s=await sb.auth.getSession();if(s.data.session){me=s.data.session.user;tok=s.data.session.access_token;showC()}}
-async function doLogin(){var e=document.getElementById("email").value.trim(),p=document.getElementById("password").value,b=document.getElementById("lb"),x=document.getElementById("le");if(!e||!p){x.textContent="Enter email and password.";x.classList.remove("hidden");return}b.disabled=true;b.innerHTML="Signing in...";x.classList.add("hidden");var r=await sb.auth.signInWithPassword({email:e,password:p});if(r.error){x.textContent=r.error.message;x.classList.remove("hidden");b.disabled=false;b.textContent="Sign In";return}me=r.data.user;tok=r.data.session.access_token;showC()}
-async function showC(){document.getElementById("L").classList.add("hidden");document.getElementById("C").classList.remove("hidden");document.getElementById("ue").textContent=me.email;await chk()}
-async function chk(){var a=document.getElementById("sa");try{var r=await fetch(U+"/functions/v1/shopify-oauth?action=status",{headers:{Authorization:"Bearer "+tok}});var d=await r.json();if(d.connected){a.innerHTML='<div class="sb sc"><strong>Shopify Connected</strong><br>Store: '+(d.shopHandle||"Connected")+"</div>";document.getElementById("cf").innerHTML='<p style="font-size:14px;color:#666;margin:16px 0">Store linked! Open Restockt app to sync.</p><button class="btn btn-shopify" onclick="showR()">Reconnect Different Store</button>'}else{a.innerHTML='<div class="sb sw">Shopify not connected. Enter store name below.</div>'}}catch(e){a.innerHTML='<div class="sb se">Could not check status.</div>'}}
-function showR(){document.getElementById("cf").innerHTML='<div class="sf"><input type="text" id="sn" placeholder="your-store-name"><p class="hint">Store name (before .myshopify.com)</p></div><button class="btn btn-shopify" id="cb" onclick="doConnect()">Connect Shopify</button>'}
-function doConnect(){var s=document.getElementById("sn").value.trim().replace(".myshopify.com","");if(!s){alert("Enter store name.");return}var b=document.getElementById("cb");if(b){b.disabled=true;b.innerHTML="Redirecting..."}window.location.href=U+"/functions/v1/shopify-oauth?action=auth&shop="+encodeURIComponent(s)+"&user_id="+me.id}
-function doLogout(){sb.auth.signOut();me=null;tok=null;document.getElementById("L").classList.remove("hidden");document.getElementById("C").classList.add("hidden")}
-document.addEventListener("keydown",function(e){if(e.key==="Enter"&&!document.getElementById("L").classList.contains("hidden"))doLogin()});
+var SUPABASE_URL='https://tjihedvhcsayulfwfpov.supabase.co';
+var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqaWhlZHZoY3NheXVsZndmcG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDI4NDYsImV4cCI6MjA5MDAxODg0Nn0.9L4baXAf7rWjKqJFq8q18iyVNd16TXgNRsqrGIhFAUE';
+var sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+var currentUser=null,sessionToken=null;
+async function init(){var params=new URLSearchParams(window.location.search);if(params.get('connected')==='true'){var shopName=params.get('shop')||'your store';document.querySelector('.card').innerHTML='<div style="font-size:64px;margin-bottom:16px">&#x2705;</div><h1>Shopify Connected!</h1><p class="subtitle"><strong>'+shopName+'</strong> is now linked to Restockt.</p><p class="subtitle">Your products and orders will sync automatically. Open the Restockt app to continue.</p><a href="restockt://shopify-connected?shop='+encodeURIComponent(shopName)+'" style="display:inline-block;margin-top:16px;padding:14px 32px;background:#4F46E5;color:#fff;border-radius:12px;font-weight:700;text-decoration:none;font-size:16px">Open Restockt</a>';window.history.replaceState({},'',window.location.pathname);return;}var s=await sb.auth.getSession();if(s.data.session){currentUser=s.data.session.user;sessionToken=s.data.session.access_token;showConnectSection();}}
+async function handleLogin(){var email=document.getElementById('email').value.trim();var password=document.getElementById('password').value;var btn=document.getElementById('login-btn');var errBox=document.getElementById('login-error');if(!email||!password){errBox.textContent='Please enter your email and password.';errBox.classList.remove('hidden');return;}btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in...';errBox.classList.add('hidden');var r=await sb.auth.signInWithPassword({email:email,password:password});if(r.error){errBox.textContent=r.error.message;errBox.classList.remove('hidden');btn.disabled=false;btn.textContent='Sign In';return;}currentUser=r.data.user;sessionToken=r.data.session.access_token;showConnectSection();}
+async function showConnectSection(){document.getElementById('login-section').classList.add('hidden');document.getElementById('connect-section').classList.remove('hidden');document.getElementById('user-email').textContent=currentUser.email;await checkStatus();}
+async function checkStatus(){var sa=document.getElementById('status-area');var cf=document.getElementById('connect-form');try{var res=await fetch(SUPABASE_URL+'/functions/v1/shopify-oauth?action=status',{headers:{'Authorization':'Bearer '+sessionToken}});var d=await res.json();if(d.connected){sa.innerHTML='<div class="status-box status-connected"><strong>Shopify Connected</strong><br>Store: '+(d.shopHandle||d.shopName||'Connected')+(d.lastSync?'<div class="last-sync">Last synced: '+new Date(d.lastSync).toLocaleString()+'</div>':'')+'</div>';cf.innerHTML='<p style="font-size:14px;color:#666;margin-bottom:16px">Your store is linked. Open the Restockt app to sync your products.</p><button class="btn btn-shopify" onclick="showReconnect()">Reconnect with a Different Store</button>';}else{sa.innerHTML='<div class="status-box status-disconnected">Shopify is not connected yet. Enter your store name below to get started.</div>';}}catch(e){sa.innerHTML='<div class="status-box status-error">Could not check status. Please try again.</div>';}}
+function showReconnect(){document.getElementById('connect-form').innerHTML='<div class="shop-field"><input type="text" id="shop-name" placeholder="your-store-name" autocomplete="off"><p class="shop-hint">Enter your Shopify store name (the part before .myshopify.com)</p></div><button class="btn btn-shopify" id="connect-btn" onclick="handleConnect()">Connect Shopify</button>';}
+function handleConnect(){var si=document.getElementById('shop-name');var shop=si?si.value.trim().replace('.myshopify.com',''):'';if(!shop){alert('Please enter your Shopify store name.');return;}var btn=document.getElementById('connect-btn');if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Redirecting to Shopify...';}window.location.href=SUPABASE_URL+'/functions/v1/shopify-oauth?action=auth&shop='+encodeURIComponent(shop)+'&user_id='+currentUser.id;}
+function handleLogout(){sb.auth.signOut();currentUser=null;sessionToken=null;document.getElementById('login-section').classList.remove('hidden');document.getElementById('connect-section').classList.add('hidden');document.getElementById('email').value='';document.getElementById('password').value='';}
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&!document.getElementById('login-section').classList.contains('hidden'))handleLogin();});
 init();
 </script>
 </body>
