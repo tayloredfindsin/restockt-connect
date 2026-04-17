@@ -36,7 +36,11 @@ h1{font-size:24px;font-weight:700;margin-bottom:6px}
 .hidden{display:none}
 .spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.last-sync{font-size:12px;color:#888;margin-top:8px}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e0e0e0}
+.divider span{font-size:12px;color:#999;font-weight:600}
+.btn-google{background:#fff;color:#333;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px 24px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+.btn-google:hover{background:#f8f8f8;border-color:#ccc}
 </style>
 </head>
 <body>
@@ -45,6 +49,11 @@ h1{font-size:24px;font-weight:700;margin-bottom:6px}
 <h1>Restockt</h1>
 <p class="subtitle">Connect your Shopify store to sync products and orders with Restockt.</p>
 <div id="login-section">
+<button class="btn-google" onclick="handleGoogleLogin()">
+<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+Sign in with Google
+</button>
+<div class="divider"><span>OR</span></div>
 <div style="margin-bottom:24px">
 <div class="field"><label for="email">Email</label><input type="email" id="email" placeholder="you@example.com" autocomplete="email"></div>
 <div class="field"><label for="password">Password</label><input type="password" id="password" placeholder="Your Restockt password" autocomplete="current-password"></div>
@@ -73,13 +82,82 @@ var SUPABASE_URL='https://tjihedvhcsayulfwfpov.supabase.co';
 var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqaWhlZHZoY3NheXVsZndmcG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDI4NDYsImV4cCI6MjA5MDAxODg0Nn0.9L4baXAf7rWjKqJFq8q18iyVNd16TXgNRsqrGIhFAUE';
 var sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 var currentUser=null,sessionToken=null;
-async function init(){var params=new URLSearchParams(window.location.search);if(params.get('connected')==='true'){var shopName=params.get('shop')||'your store';document.querySelector('.card').innerHTML='<div style="font-size:64px;margin-bottom:16px">&#x2705;</div><h1>Shopify Connected!</h1><p class="subtitle"><strong>'+shopName+'</strong> is now linked to Restockt.</p><p class="subtitle">Your products and orders will sync automatically. Open the Restockt app to continue.</p><a href="restockt://shopify-connected?shop='+encodeURIComponent(shopName)+'" style="display:inline-block;margin-top:16px;padding:14px 32px;background:#4F46E5;color:#fff;border-radius:12px;font-weight:700;text-decoration:none;font-size:16px">Open Restockt</a>';window.history.replaceState({},'',window.location.pathname);return;}var s=await sb.auth.getSession();if(s.data.session){currentUser=s.data.session.user;sessionToken=s.data.session.access_token;showConnectSection();}}
-async function handleLogin(){var email=document.getElementById('email').value.trim();var password=document.getElementById('password').value;var btn=document.getElementById('login-btn');var errBox=document.getElementById('login-error');if(!email||!password){errBox.textContent='Please enter your email and password.';errBox.classList.remove('hidden');return;}btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in...';errBox.classList.add('hidden');var r=await sb.auth.signInWithPassword({email:email,password:password});if(r.error){errBox.textContent=r.error.message;errBox.classList.remove('hidden');btn.disabled=false;btn.textContent='Sign In';return;}currentUser=r.data.user;sessionToken=r.data.session.access_token;showConnectSection();}
-async function showConnectSection(){document.getElementById('login-section').classList.add('hidden');document.getElementById('connect-section').classList.remove('hidden');document.getElementById('user-email').textContent=currentUser.email;await checkStatus();}
-async function checkStatus(){var sa=document.getElementById('status-area');var cf=document.getElementById('connect-form');try{var res=await fetch(SUPABASE_URL+'/functions/v1/shopify-oauth?action=status',{headers:{'Authorization':'Bearer '+sessionToken}});var d=await res.json();if(d.connected){sa.innerHTML='<div class="status-box status-connected"><strong>Shopify Connected</strong><br>Store: '+(d.shopHandle||d.shopName||'Connected')+(d.lastSync?'<div class="last-sync">Last synced: '+new Date(d.lastSync).toLocaleString()+'</div>':'')+'</div>';cf.innerHTML='<p style="font-size:14px;color:#666;margin-bottom:16px">Your store is linked. Open the Restockt app to sync your products.</p><button class="btn btn-shopify" onclick="showReconnect()">Reconnect with a Different Store</button>';}else{sa.innerHTML='<div class="status-box status-disconnected">Shopify is not connected yet. Enter your store name below to get started.</div>';}}catch(e){sa.innerHTML='<div class="status-box status-error">Could not check status. Please try again.</div>';}}
+
+async function init(){
+var params=new URLSearchParams(window.location.search);
+if(params.get('connected')==='true'){
+var shopName=params.get('shop')||'your store';
+document.querySelector('.card').innerHTML='<div style="font-size:64px;margin-bottom:16px">&#x2705;</div><h1>Shopify Connected!</h1><p class="subtitle"><strong>'+shopName+'</strong> is now linked to Restockt.</p><p class="subtitle">Your products and orders will sync automatically.</p>';
+window.history.replaceState({},'',window.location.pathname);
+return;
+}
+// Check for hash fragment from OAuth redirect
+var hashParams=new URLSearchParams(window.location.hash.substring(1));
+if(hashParams.get('access_token')){
+// OAuth redirect - let Supabase handle it
+}
+var s=await sb.auth.getSession();
+if(s.data.session){currentUser=s.data.session.user;sessionToken=s.data.session.access_token;showConnectSection();}
+}
+
+async function handleGoogleLogin(){
+var errBox=document.getElementById('login-error');
+var {data,error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname}});
+if(error){errBox.textContent=error.message;errBox.classList.remove('hidden');}
+}
+
+async function handleLogin(){
+var email=document.getElementById('email').value.trim();
+var password=document.getElementById('password').value;
+var btn=document.getElementById('login-btn');
+var errBox=document.getElementById('login-error');
+if(!email||!password){errBox.textContent='Please enter your email and password.';errBox.classList.remove('hidden');return;}
+btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in...';errBox.classList.add('hidden');
+var r=await sb.auth.signInWithPassword({email:email,password:password});
+if(r.error){errBox.textContent=r.error.message;errBox.classList.remove('hidden');btn.disabled=false;btn.textContent='Sign In';return;}
+currentUser=r.data.user;sessionToken=r.data.session.access_token;showConnectSection();
+}
+
+async function showConnectSection(){
+document.getElementById('login-section').classList.add('hidden');
+document.getElementById('connect-section').classList.remove('hidden');
+document.getElementById('user-email').textContent=currentUser.email;
+await checkStatus();
+}
+
+async function checkStatus(){
+var sa=document.getElementById('status-area');
+var cf=document.getElementById('connect-form');
+try{
+var res=await fetch(SUPABASE_URL+'/functions/v1/shopify-oauth?action=status',{headers:{'Authorization':'Bearer '+sessionToken}});
+var d=await res.json();
+if(d.connected){
+sa.innerHTML='<div class="status-box status-connected"><strong>Shopify Connected</strong><br>Store: '+(d.shopHandle||d.shopName||'Connected')+'</div>';
+cf.innerHTML='<p style="font-size:14px;color:#666;margin-bottom:16px">Your store is linked. Sync your products from the Restockt app.</p><button class="btn btn-shopify" onclick="showReconnect()">Reconnect with a Different Store</button>';
+}else{
+sa.innerHTML='<div class="status-box status-disconnected">Shopify is not connected yet. Enter your store name below to get started.</div>';
+}
+}catch(e){sa.innerHTML='<div class="status-box status-error">Could not check status. Please try again.</div>';}
+}
+
 function showReconnect(){document.getElementById('connect-form').innerHTML='<div class="shop-field"><input type="text" id="shop-name" placeholder="your-store-name" autocomplete="off"><p class="shop-hint">Enter your Shopify store name (the part before .myshopify.com)</p></div><button class="btn btn-shopify" id="connect-btn" onclick="handleConnect()">Connect Shopify</button>';}
-function handleConnect(){var si=document.getElementById('shop-name');var shop=si?si.value.trim().replace('.myshopify.com',''):'';if(!shop){alert('Please enter your Shopify store name.');return;}var btn=document.getElementById('connect-btn');if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Redirecting to Shopify...';}window.location.href=SUPABASE_URL+'/functions/v1/shopify-oauth?action=auth&shop='+encodeURIComponent(shop)+'&user_id='+currentUser.id;}
-function handleLogout(){sb.auth.signOut();currentUser=null;sessionToken=null;document.getElementById('login-section').classList.remove('hidden');document.getElementById('connect-section').classList.add('hidden');document.getElementById('email').value='';document.getElementById('password').value='';}
+
+function handleConnect(){
+var si=document.getElementById('shop-name');
+var shop=si?si.value.trim().replace('.myshopify.com',''):'';
+if(!shop){alert('Please enter your Shopify store name.');return;}
+var btn=document.getElementById('connect-btn');
+if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Redirecting to Shopify...';}
+window.location.href=SUPABASE_URL+'/functions/v1/shopify-oauth?action=auth&shop='+encodeURIComponent(shop)+'&user_id='+currentUser.id;
+}
+
+function handleLogout(){
+sb.auth.signOut();currentUser=null;sessionToken=null;
+document.getElementById('login-section').classList.remove('hidden');
+document.getElementById('connect-section').classList.add('hidden');
+document.getElementById('email').value='';document.getElementById('password').value='';
+}
+
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&!document.getElementById('login-section').classList.contains('hidden'))handleLogin();});
 init();
 </script>
